@@ -1,8 +1,14 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Form, FormikProvider, useFormik } from "formik";
 import * as Yup from "yup";
-import { useDispatch, useSelector } from "react-redux";
-// import {addAstrologer } from "../../redux/slices/Astrologer";
+import { useAppDispatch, useAppSelector } from "../../redux/hooks";
+import {
+  addAstrologer,
+  getMyAstrologer,
+  updateAstrologer,
+} from "../../redux/slices/Astrologer";
+import { useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 // import Languages from '../../assets/data/Languages'
 import {
   Box,
@@ -26,7 +32,14 @@ interface AstrologerDetails {
 }
 
 function AstrologerAddForm() {
-  // const dispatch = useDispatch()
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const params = useParams();
+  const astrologer = useAppSelector((state) => state.astrologer.meAstrologer);
+  // const filterdAstrologer = astrologer.data.filter((data) => {
+
+  // })
+  console.log("params", params, astrologer);
   const astrologerSpecialitiesList = [
     "Astrology",
     "Numerology",
@@ -72,15 +85,30 @@ function AstrologerAddForm() {
     "Turkish",
     "Vietnamese",
   ];
-  
+
   const formik = useFormik({
     enableReinitialize: true,
     initialValues: {
-      name: "",
-      gender: "",
-      email: "",
-      languages: [],
-      specialties: [],
+      name:
+        params.id && Array.isArray(astrologer) && astrologer.length > 0
+          ? astrologer[0].name
+          : "",
+      gender:
+        params.id && Array.isArray(astrologer) && astrologer.length > 0
+          ? astrologer[0].gender
+          : "",
+      email:
+        params.id && Array.isArray(astrologer) && astrologer.length > 0
+          ? astrologer[0].email
+          : "",
+      languages:
+        params.id && Array.isArray(astrologer) && astrologer.length > 0
+          ? astrologer[0].languages
+          : [],
+      specialties:
+        params.id && Array.isArray(astrologer) && astrologer.length > 0
+          ? astrologer[0].specialties
+          : [],
     } as AstrologerDetails,
 
     validationSchema: Yup.object().shape({
@@ -88,32 +116,71 @@ function AstrologerAddForm() {
       gender: Yup.string().required("Gender is required"),
       email: Yup.string().required("Email is Required"),
       languages: Yup.array()
-        .of(Yup.string().required("Language is required"))
+        .of(Yup.string().oneOf(languages, "Invalid language"))
+        .min(1, "At least one language is required")
         .required("At least one language is required"),
       specialties: Yup.array()
-        .of(Yup.string().required("Specialties is required"))
-        .required("At least one specialty is required"),
+        .of(
+          Yup.string().oneOf(astrologerSpecialitiesList, "Invalid specialties")
+        )
+        .min(1, "At least one specialties is required")
+        .required("At least one specialties is required"),
     }),
 
-    onSubmit: async (values: AstrologerDetails, { setSubmitting, resetForm, setErrors }) => {
+    onSubmit: async (
+      values: AstrologerDetails,
+      { setSubmitting, resetForm, setErrors }
+    ) => {
       try {
         console.log(setSubmitting, setErrors, resetForm, values);
         console.log("submitted values", values);
-        // dispatch(addAstrologer(values))
+        if (params.id) {
+          await dispatch(updateAstrologer({ values, id: params.id })).then(
+            (res) => {
+              console.log("result", res);
+              console.log("asdasdas", res);
+              if (res.payload.status === "success") {
+                navigate("/astrologer-list");
+                resetForm();
+              }
+            }
+          );
+        } else {
+          await dispatch(addAstrologer({ values })).then((res) => {
+            console.log("result", res);
+            console.log("asdasdas", res);
+            if (res.payload.status === "success") {
+              navigate("/astrologer-list");
+              resetForm();
+            }
+          });
+        }
       } catch (error) {
         console.log(error);
       }
     },
   });
 
-  const {
-    errors,
-    values,
-    touched,
-    handleSubmit,
-    handleChange,
-  } = formik;
+  const { errors, values, touched, handleSubmit, handleChange } = formik;
 
+  useEffect(() => {
+    if (params.id) {
+      dispatch(getMyAstrologer({ id: params.id })).then((response) => {
+        // Check if the response is successful and has data
+        console.log("res asidasdhasdhj", response);
+        if (response.payload.status === "success" && response.payload.data) {
+          // Set initial values for the form
+          formik.setValues({
+            name: response.payload[0].name,
+            gender: response.payload.gender,
+            email: response.payload.email,
+            languages: response.payload.languages,
+            specialties: response.payload.specialties,
+          });
+        }
+      });
+    }
+  }, [params.id, formik.setValues]);
   return (
     <Box
       sx={{ display: "flex", justifyContent: "center", alignItems: "center" }}
@@ -186,14 +253,17 @@ function AstrologerAddForm() {
                   error={Boolean(touched.languages && errors.languages)}
                 >
                   {languages?.map((val) => (
-                    <MenuItem value={val}>{val}</MenuItem>
+                    <MenuItem key={val} value={val}>
+                      {val}
+                    </MenuItem>
                   ))}
                 </Select>
-                {touched.gender && errors.gender && (
-                  <FormHelperText error>{errors.gender}</FormHelperText>
+                {touched.languages && errors.languages && (
+                  <FormHelperText error>{errors.languages}</FormHelperText>
                 )}
               </FormControl>
             </Grid>
+
             <Grid item xs={12} md={12} lg={12} xl={12}>
               <FormControl fullWidth size="small">
                 <InputLabel id="demo-simple-select-label">
@@ -226,7 +296,7 @@ function AstrologerAddForm() {
                 size="small"
                 // loading={isSubmitting}
               >
-                Submit
+                {params.id ? "Update" : "Submit"}
               </Button>
             </Grid>
           </Grid>

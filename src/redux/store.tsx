@@ -1,11 +1,12 @@
-// store.ts
-import { configureStore } from '@reduxjs/toolkit';
-import apiReducer from './slices/Astrologer';
+import { configureStore } from "@reduxjs/toolkit";
+import reducer from "./slices/Astrologer";
+// ...
 
-const store = configureStore({
+export const store = configureStore({
   reducer: {
-    api: apiReducer,
+    astrologer: reducer,
   },
 });
 
-export default store;
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;

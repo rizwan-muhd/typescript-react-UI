@@ -10,7 +10,11 @@ export default function AppRouter() {
       element: <AstrologerListPage children={undefined} />,
     },
     {
-      path: '/astrologer-add',
+      path: '/',
+      element: <AstrologerAddPage children={undefined} />,
+    },
+    {
+      path: '/astrologer-edit/:id',
       element: <AstrologerAddPage children={undefined} />,
     },
   ]);
